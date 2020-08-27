@@ -1,25 +1,26 @@
 # Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
-#Licensed under the Apache License, Version 2.0 (the "License");
-#you may not use this file except in compliance with the License.
-#You may obtain a copy of the License at
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 #    http://www.apache.org/licenses/LICENSE-2.0
 #
-#Unless required by applicable law or agreed to in writing, software
-#distributed under the License is distributed on an "AS IS" BASIS,
-#WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#See the License for the specific language governing permissions and
-#limitations under the License.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-#sys.argv[1] = block name
-#sys.argv[2] = testname
-#sys.argv[3] = cycles
-#sys.argv[4] = clock period
-#python code that uses pytorch and DGL.ai packages to perform per cycle, zero delay mode 2 value oblivious simulation with parallelism across cycles and gates.
-#suggest run on GPU, need following packages
-#command line variables described above.
-#script takes as input a lil_matrix graph object, traces of input port and register outputs in array format, the clock period, and the number of cycles to be simulated
-#outputs an array/tensor with the simulated values for the combinational logic
+# sys.argv[1] = block name
+# sys.argv[2] = testname
+# sys.argv[3] = cycles
+# sys.argv[4] = clock period
+# python code that uses pytorch and DGL.ai packages to perform per cycle, zero delay mode 2 value oblivious simulation with parallelism across cycles and gates.
+# suggest run on GPU, need following packages
+# command line variables described above.
+# script takes as input a lil_matrix graph object, traces of input port and register outputs in array format, the clock period, and the number of cycles to be simulated
+# outputs an array/tensor with the simulated values for the combinational logic
 
 import torch as th
 import torch.nn as nn
@@ -47,7 +48,9 @@ from datetime import datetime
 BLOCK=sys.argv[1]
 TESTNAME=sys.argv[2]
 CYCLES=int(sys.argv[3])
-PERIOD = float(sys.argv[4])
+#BLOCK = "mul3"
+#TESTNAME='random10cycles'
+#CYCLES=10
 
 def is_update_edge(edges): return (edges.data['edge_type'] == 2)
 
@@ -98,6 +101,10 @@ def build_graph(pkl, traces_features, total_cycles):
 prop_block, features_block, cell_names_block= build_graph(BLOCK + "_graph_object", "traces_ios_" + BLOCK + "_" + TESTNAME + ".tbl", CYCLES)
 
 
+# +
+#after this step you can query the DGL.ai graph object (prop_block) to see what information is stored in the graph
+#you can query features_block, along with cell_names_block to see how the waveforms will be set up
+# -
 
 #load the truth tables for the simulation
 def dec_to_bin(x,bit_width):
@@ -250,3 +257,14 @@ simulation_results = netgpu(prop_block,features_block)
 later=datetime.now()
 delta=(later-now).total_seconds()
 print("the whole simulation took " + str(delta) + " seconds on the GPU")
+
+# +
+#for the example, querying the cell_names_block tells us the output PRODUCT will be row numbers 113 to 118
+#so if we query simulation_results[113:119], we can see the results of the integer mul3 is correct
+#we should have
+#tensor([[0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+#        [0, 0, 1, 0, 0, 1, 1, 0, 0, 0],
+#        [0, 0, 1, 1, 0, 1, 0, 0, 1, 0],
+#        [1, 0, 0, 0, 1, 1, 1, 1, 0, 0],
+#        [0, 1, 0, 1, 0, 1, 0, 1, 1, 1],
+#        [0, 1, 1, 0, 1, 0, 0, 0, 0, 1]], device='cuda:0', dtype=torch.uint8)
